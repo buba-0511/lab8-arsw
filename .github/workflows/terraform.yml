@@ -3,6 +3,10 @@ name: Terraform
 on:
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   TF_WORKING_DIR: infra
   TF_VERSION: 1.6.2
@@ -10,22 +14,17 @@ env:
 jobs:
   fmt-validate-plan:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
       - name: Azure login with OIDC
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          auth-type: OIDC
-          enable-AzPSSession: false
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -59,16 +58,13 @@ jobs:
     needs: fmt-validate-plan
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
-    permissions:
-      id-token: write
-      contents: read
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Azure login (OIDC)
-        uses: azure/login@v1
+      - name: Azure login with OIDC
+        uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
