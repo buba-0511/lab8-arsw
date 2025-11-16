@@ -10,7 +10,6 @@ permissions:
 env:
   TF_WORKING_DIR: infra
   TF_VERSION: 1.6.2
-  # Backend configuration stored as GitHub Secrets
   TF_VAR_resource_group_name: ${{ secrets.TF_VAR_resource_group_name }}
   TF_VAR_storage_account_name: ${{ secrets.TF_VAR_storage_account_name }}
   TF_VAR_container_name: ${{ secrets.TF_VAR_container_name }}
@@ -20,6 +19,12 @@ jobs:
   fmt-validate-plan:
     runs-on: ubuntu-latest
     environment: dev
+
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: true
 
     steps:
       - uses: actions/checkout@v3
@@ -52,6 +57,8 @@ jobs:
 
       - name: Terraform init
         run: |
+          # The Azure provider will now use the ARM_* environment variables (including ARM_USE_OIDC=true)
+          # to authenticate, successfully bypassing the CLI conflict.
           terraform init -input=false \
             -backend-config="resource_group_name=${TF_VAR_resource_group_name}" \
             -backend-config="storage_account_name=${TF_VAR_storage_account_name}" \
@@ -79,6 +86,15 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
     environment: dev
+
+    # --- ADDED: Explicit ARM environment variables for Azure Provider ---
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      # This is the critical variable to force the provider to use OIDC/Workload Identity
+      ARM_USE_OIDC: true
+    # -------------------------------------------------------------------
 
     steps:
       - uses: actions/checkout@v3
