@@ -17,8 +17,17 @@ jobs:
     environment: dev
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.terraform.d/plugin-cache
+            ${{ env.TF_WORKING_DIR }}/.terraform
+          key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-
 
       - name: Azure login with OIDC
         uses: azure/login@v2
@@ -37,7 +46,7 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform init
-        run: terraform init
+        run: terraform init -input=false -backend=true
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform validate
@@ -59,10 +68,10 @@ jobs:
     needs: fmt-validate-plan
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
+    environment: dev
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Azure login with OIDC
         uses: azure/login@v2
@@ -77,13 +86,23 @@ jobs:
           name: tfplan
           path: ${{ env.TF_WORKING_DIR }}
 
+      - name: Cache Terraform providers
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.terraform.d/plugin-cache
+            ${{ env.TF_WORKING_DIR }}/.terraform
+          key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform init
-        run: terraform init
+        run: terraform init -input=false -backend=true
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform apply
